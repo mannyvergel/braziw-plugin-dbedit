@@ -1,0 +1,20 @@
+{% extends _cms.conf.adminTemplate %}
+
+{% block head %}
+<style>
+i.dbedit {
+	font-size: 18px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{{super()}}
+
+<p>
+  <a class="btn btn-primary" href="/admin/dbedit/save?model={{modelName}}"><i class="fa fa-plus fa-fw"></i> {{modelName}}</a>
+</p>
+
+{{table | safe}}
+
+{% endblock %}

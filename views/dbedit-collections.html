@@ -1,0 +1,17 @@
+{% extends _cms.conf.adminTemplate %}
+
+{% block content %}
+{{super()}}
+
+<table class="table">
+<thead>
+<tr><th>Collection</th></tr>
+</thead>
+<tbody>
+{%for modelInfo in modelInfos%}
+<tr><td><a href="/admin/dbedit/list?model={{modelInfo.path}}">{{modelInfo.name}}</a></td></tr>
+{%endfor%}
+</tbody>
+</table>
+
+{% endblock %}
