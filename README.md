@@ -1,8 +1,8 @@
-oils-plugin-dbedit
+braziw-plugin-dbedit
 ================
 
-Oils js Mongo DB object editor / scaffolding.
+Braziw js Mongo DB object editor / scaffolding.
 
 Installation:
 
-```npm install oils-plugin-dbedit```
+```npm install braziw-plugin-dbedit```

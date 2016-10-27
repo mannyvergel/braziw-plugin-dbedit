@@ -15,3 +15,15 @@ exports.searchModel = function(modelStr) {
 		return web.models(modelStr);
 	}
 }
+
+exports.getModelConf = function(modelName) {
+	var modelConfs = web.cms.dbedit.conf.models;
+	for (var i in modelConfs) {
+		var modelConf = modelConfs[i];
+		if (modelConf.name == modelName || modelConf.path == modelName) {
+			return modelConf
+		}
+	}
+
+	return null;
+}

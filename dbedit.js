@@ -22,5 +22,27 @@ module.exports = function DbEdit(pluginConf, web, next) {
     ]
   })
 
+  normaliseModels();
+
   next();
+}
+
+function normaliseModels() {
+  var modelInfos = web.cms.dbedit.conf.models;
+  for (var i in modelInfos) {
+    var modelInfo = modelInfos[i];
+    if (!modelInfo.name) {
+      modelInfo.name = getModelNameFromPath(modelInfo.path);
+    }
+  }
+}
+
+function getModelNameFromPath(modelPath) {
+  if (!modelPath) {
+    return '';
+  }
+
+  var arrModelSplit = modelPath.split('/');
+  var nameWithJs = arrModelSplit[arrModelSplit.length-1];
+  return nameWithJs.split('.')[0];
 }
