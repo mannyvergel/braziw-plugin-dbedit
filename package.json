@@ -27,7 +27,6 @@
   "bundleDependencies": [],
   "private": false,
   "main": "dbedit.js",
-  "gitHead": "cd8852a0421a29f29bf03bb0c95acab021f382a7",
   "bugs": {
     "url": "https://github.com/mannyvergel/braziw-plugin-dbedit/issues"
   },
@@ -36,7 +35,5 @@
       "name": "mannyvergel",
       "email": "manny@mvergel.com"
     }
-  ],
-  "directories": {},
-  "readme": "ERROR: No README data found!"
+  ]
 }
