@@ -46,14 +46,16 @@ module.exports = {
 				throw err;
 			}
 
+			var attrToSet = Object.assign({}, req.body);
 			if (!rec) {
 				rec = new model();
+				attrToSet.createDt = new Date();
+				attrToSet.createBy = req.user._id;
 			}
-
-			var attrToSet = Object.assign({}, req.body);
+			
 			delete attrToSet._id;
 			attrToSet.lastModDt = new Date();
-			attrToSet.lastModBy = req.user.username;
+			attrToSet.lastModBy = req.user._id;
 
 			rec.set(attrToSet);
 
