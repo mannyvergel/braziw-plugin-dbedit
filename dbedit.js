@@ -8,6 +8,7 @@ module.exports = function DbEdit(pluginConf, web, next) {
       collectionsView: pluginPath + "/views/dbedit-collections.html",
       listView: pluginPath + "/views/dbedit-list.html",
       addToMenu: true,
+      models: [],
     },
     pluginConf);
 

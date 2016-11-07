@@ -47,7 +47,9 @@ module.exports = {
 			  handlers: handlers
 			}, 
 			function(err, table) {
-			res.render(web.cms.dbedit.conf.listView, {table: table, pageTitle: modelName + ' List', modelName: modelName});
+				var listView = modelConf.view || web.cms.dbedit.conf.listView;
+				var pageTitle = modelConf.pageTitle || (modelName + ' List');
+				res.render(listView, {table: table, pageTitle: pageTitle, modelName: modelName});
 		});
 	}
 }
