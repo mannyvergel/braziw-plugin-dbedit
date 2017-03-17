@@ -1,10 +1,10 @@
-var dbeditUtils = require('../utils/dbeditUtils.js');
+
 module.exports = {
 	get: function(req, res) {
 		var modelStr = req.query.model;
 		var recId = req.query._id;
 
-		var model = dbeditUtils.searchModel(modelStr);
+		var model = web.cms.dbedit.utils.searchModel(modelStr);
 		var modelAttr = model.getModelDictionary();
 		var modelSchema = modelAttr.schema;
 		var modelName = modelAttr.name;

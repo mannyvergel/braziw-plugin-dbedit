@@ -1,14 +1,14 @@
-var dbeditUtils = require('../utils/dbeditUtils.js');
+
 module.exports = {
 	get: function(req, res) {
 		var modelStr = req.query.model;
 		//should be in cache by this time (assumption)
-		var model = dbeditUtils.searchModel(modelStr);
+		var model = web.cms.dbedit.utils.searchModel(modelStr);
 		var modelAttr = model.getModelDictionary();
 		var modelSchema = modelAttr.schema;
 		var modelName = modelAttr.name;
 		var modelDisplayName = modelAttr.displayName || modelAttr.name;
-		var modelConf = dbeditUtils.getModelConf(modelName);
+		var modelConf = web.cms.dbedit.utils.getModelConf(modelName);
 
 		var cols = modelConf.cols;
 		var labels = modelConf.labels;
@@ -20,7 +20,7 @@ module.exports = {
 			for (var i in modelSchema) {
 
 				cols.push(i);
-				labels.push(dbeditUtils.camelToTitle(i));
+				labels.push(web.cms.dbedit.utils.camelToTitle(i));
 
 				counter++;
 				if (counter > maxColsDisplay) {

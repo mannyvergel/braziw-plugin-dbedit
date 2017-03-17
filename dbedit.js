@@ -14,7 +14,7 @@ module.exports = function DbEdit(pluginConf, web, next) {
 
   var self = this;
   web.cms.dbedit = self;
-
+  web.cms.dbedit.utils = dbeditUtils;
   this.conf = pluginConf;
 
   web.applyRoutes(require('./conf/routes.js'));

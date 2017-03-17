@@ -1,10 +1,10 @@
-var dbeditUtils = require('../utils/dbeditUtils.js');
+
 module.exports = {
 	get: function(req, res) {
 		var modelStr = req.query.model;
 		var recId = req.query._id;
 
-		var model = dbeditUtils.searchModel(modelStr);
+		var model = web.cms.dbedit.utils.searchModel(modelStr);
 		var modelAttr = model.getModelDictionary();
 		var modelSchema = modelAttr.schema;
 		var modelName = modelAttr.name;
@@ -12,7 +12,7 @@ module.exports = {
 
 		for (var i in modelSchema) {
 			var attr = modelSchema[i];
-			attr.dbeditDisplay = dbeditUtils.camelToTitle(i);
+			attr.dbeditDisplay = web.cms.dbedit.utils.camelToTitle(i);
 		}
 
 		var redirectAfter = '/admin/dbedit/list?model=' + modelName;
@@ -39,6 +39,9 @@ module.exports = {
 		}
 
 		var model = web.models(modelName);
+		var modelAttr = model.getModelDictionary();
+		var modelDisplayName = modelAttr.displayName || modelAttr.name;
+
 		var redirectAfter = req.body.redirectAfter || '/admin/dbedit/list?model=' + modelName;
 
 		//can be optimized by avoiding query if there's no id
@@ -66,7 +69,7 @@ module.exports = {
 					throw err;
 				}
 
-				req.flash('info', modelName + ' saved.');
+				req.flash('info', modelDisplayName + ' saved.');
 				res.redirect(redirectAfter);
 			})
 		})
