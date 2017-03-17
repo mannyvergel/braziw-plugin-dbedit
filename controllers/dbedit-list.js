@@ -7,6 +7,7 @@ module.exports = {
 		var modelAttr = model.getModelDictionary();
 		var modelSchema = modelAttr.schema;
 		var modelName = modelAttr.name;
+		var modelDisplayName = modelAttr.displayName || modelAttr.name;
 		var modelConf = dbeditUtils.getModelConf(modelName);
 
 		var cols = modelConf.cols;
@@ -48,8 +49,8 @@ module.exports = {
 			}, 
 			function(err, table) {
 				var listView = modelConf.view || web.cms.dbedit.conf.listView;
-				var pageTitle = modelConf.pageTitle || (modelName + ' List');
-				res.render(listView, {table: table, pageTitle: pageTitle, modelName: modelName});
+				var pageTitle = modelConf.pageTitle || (modelDisplayName + ' List');
+				res.render(listView, {table: table, pageTitle: pageTitle, modelName: modelName, modelDisplayName: modelDisplayName});
 		});
 	}
 }

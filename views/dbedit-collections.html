@@ -9,7 +9,7 @@
 </thead>
 <tbody>
 {%for modelInfo in modelInfos%}
-<tr><td><a href="/admin/dbedit/list?model={{modelInfo.path}}">{{modelInfo.name}}</a></td></tr>
+<tr><td><a href="/admin/dbedit/list?model={{modelInfo.path}}">{{modelInfo.displayName}}</a></td></tr>
 {%endfor%}
 </tbody>
 </table>

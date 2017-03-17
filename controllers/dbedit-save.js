@@ -8,6 +8,7 @@ module.exports = {
 		var modelAttr = model.getModelDictionary();
 		var modelSchema = modelAttr.schema;
 		var modelName = modelAttr.name;
+		var modelDisplayName = modelAttr.displayName || modelAttr.name;
 
 		for (var i in modelSchema) {
 			var attr = modelSchema[i];
@@ -20,9 +21,9 @@ module.exports = {
 		model.findOne({_id:recId}, function(err, rec) {
 			var pageTitle = null;
 			if (!rec) {
-				pageTitle = 'Create ' + modelName;
+				pageTitle = 'Create ' + modelDisplayName;
 			} else {
-				pageTitle = 'Update ' + modelName;
+				pageTitle = 'Update ' + modelDisplayName;
 			}
 			res.render(web.cms.dbedit.conf.saveView, {rec: rec || {}, modelAttr: modelAttr, pageTitle: pageTitle, redirectAfter: redirectAfter});
 		});
