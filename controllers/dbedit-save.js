@@ -58,8 +58,8 @@ module.exports = {
 			}
 			
 			delete attrToSet._id;
-			attrToSet.lastModDt = new Date();
-			attrToSet.lastModBy = req.user._id;
+			attrToSet[web.cms.dbedit.conf.updateDtCol] = new Date();
+			attrToSet[web.cms.dbedit.conf.updateByCol] = req.user._id;
 
 			rec.set(attrToSet);
 

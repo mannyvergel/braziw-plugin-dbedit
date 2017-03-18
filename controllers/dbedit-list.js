@@ -9,6 +9,9 @@ module.exports = {
 		var modelName = modelAttr.name;
 		var modelDisplayName = modelAttr.displayName || modelAttr.name;
 		var modelConf = web.cms.dbedit.utils.getModelConf(modelName);
+		var sortDefault = {};
+		sortDefault[web.cms.dbedit.conf.updateDtCol] = -1;
+		modelConf.sort = modelConf.sort || sortDefault;
 
 		var cols = modelConf.cols;
 		var labels = modelConf.labels;
@@ -45,6 +48,7 @@ module.exports = {
 			  query: query,
 			  columns: cols,
 			  labels: labels,
+			  sort: modelConf.sort,
 			  handlers: handlers
 			}, 
 			function(err, table) {
