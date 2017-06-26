@@ -11,7 +11,14 @@ module.exports = {
 		var modelConf = web.cms.dbedit.utils.getModelConf(modelName);
 		var sortDefault = {};
 		sortDefault[web.cms.dbedit.conf.updateDtCol] = -1;
-		modelConf.sort = modelConf.sort || sortDefault;
+		
+		//support for custom sorting from request
+		var sortFromReq = null;
+		if (req.query.sort) {
+			sortFromReq = JSON.parse(req.query.sort);
+		}
+
+		modelConf.sort = sortFromReq || modelConf.sort || sortDefault;
 
 		var cols = modelConf.cols;
 		var labels = modelConf.labels;
