@@ -19,7 +19,7 @@ module.exports = function DbEdit(pluginConf, web, next) {
   web.cms.dbedit.utils = dbeditUtils;
   this.conf = pluginConf;
 
-  web.applyRoutes(require('./conf/routes.js'));
+  web.addRoutes(require('./conf/routes.js'));
 
   if (pluginConf.addToMenu) {
     web.cms.adminMenu.push({

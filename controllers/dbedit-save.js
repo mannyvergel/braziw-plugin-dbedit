@@ -4,18 +4,21 @@ module.exports = {
 		var modelStr = req.query.model;
 		var recId = req.query._id;
 
+		var querySaveView = req.query.saveView;
+		var queryDisplayName = req.query.displayName;
+
 		var model = web.cms.dbedit.utils.searchModel(modelStr);
 		var modelAttr = model.getModelDictionary();
 		var modelSchema = modelAttr.schema;
 		var modelName = modelAttr.name;
-		var modelDisplayName = modelAttr.displayName || modelAttr.name;
+		var modelDisplayName = queryDisplayName || modelAttr.displayName || modelAttr.name;
 
 		for (var i in modelSchema) {
 			var attr = modelSchema[i];
 			attr.dbeditDisplay = web.cms.dbedit.utils.camelToTitle(i);
 		}
 
-		var redirectAfter = '/admin/dbedit/list?model=' + modelName;
+		var redirectAfter = req.query.redirectAfter || ('/admin/dbedit/list?model=' + modelName);
 
 		//can be optimized by avoiding query if there's no id
 		model.findOne({_id:recId}, function(err, rec) {
@@ -25,7 +28,9 @@ module.exports = {
 			} else {
 				pageTitle = 'Update ' + modelDisplayName;
 			}
-			res.render(web.cms.dbedit.conf.saveView, {rec: rec || {}, modelAttr: modelAttr, pageTitle: pageTitle, redirectAfter: redirectAfter});
+
+			var saveView = querySaveView || web.cms.dbedit.conf.saveView;
+			res.render(saveView, {rec: rec || {}, modelAttr: modelAttr, pageTitle: pageTitle, redirectAfter: redirectAfter});
 		});
 	},
 
@@ -69,7 +74,7 @@ module.exports = {
 					throw err;
 				}
 
-				req.flash('info', modelDisplayName + ' saved.');
+				req.flash('info', 'Record saved.');
 				res.redirect(redirectAfter);
 			})
 		})
