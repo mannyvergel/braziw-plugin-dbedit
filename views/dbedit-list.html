@@ -6,6 +6,26 @@ i.dbedit {
 	font-size: 18px;
 }
 </style>
+
+<script>
+  function setGetParam(key,value) {
+
+    var params = new URLSearchParams(window.location.search);
+    params.set(key, value);
+    var newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?' + params.toString();
+
+    window.location.href = newUrl;
+
+  }
+
+  function goSort() {
+    setGetParam('sort', document.getElementById('SORT').value);
+  }
+
+  function goFilter() {
+    setGetParam('filter', document.getElementById('FILTER').value);
+  }
+</script>
 {% endblock %}
 
 {% block content %}
@@ -14,6 +34,28 @@ i.dbedit {
 <p>
   <a class="btn btn-primary" href="/admin/dbedit/save?model={{modelName}}&redirectAfter={{redirectAfter}}&{{saveParams}}"><i class="fa fa-plus fa-fw"></i> {{modelDisplayName}}</a>
 </p>
+
+<p><a href="#" onclick="document.getElementById('ADVANCED').style.display = 'inherit';return false;">Advanced</a></p>
+
+<div id="ADVANCED" style="display:none">
+
+<div class="input-group">
+  <label>Filter:</label> 
+
+  <input id="FILTER" name="filter" type="text" value="{{filter}}" class="form-control" />
+
+</div>
+
+<p><button type="button" class="btn btn-secondary" onclick="goFilter()">Go</button></p>
+
+
+<div class="input-group">
+  <label>Sort:</label> <input id="SORT" name="sort" type="text" value="{{sort}}" class="form-control" />
+  
+</div>
+<p><button type="button" class="btn btn-secondary" onclick="goSort()">Go</button></p>
+
+</div>
 
 {{table | safe}}
 

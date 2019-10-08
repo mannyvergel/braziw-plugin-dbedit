@@ -1,3 +1,5 @@
+'use strict';
+
 var dbeditUtils = require('./utils/dbeditUtils.js');
 var fs = require('fs');
 

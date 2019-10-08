@@ -1,3 +1,5 @@
+'use strict';
+
 exports.camelToTitle = function(text) {
 	if (!text) {
 		return '';

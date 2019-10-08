@@ -1,3 +1,5 @@
+'use strict';
+
 module.exports = {
 	get: function(req, res) {
 		var modelInfos = web.cms.dbedit.conf.models;
