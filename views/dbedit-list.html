@@ -31,9 +31,11 @@ i.dbedit {
 {% block content %}
 {{super()}}
 
+{%if showAddButton == 'Y'%}
 <p>
   <a class="btn btn-primary" href="/admin/dbedit/save?model={{modelName}}&redirectAfter={{redirectAfter}}&{{saveParams}}"><i class="fa fa-plus fa-fw"></i> {{modelDisplayName}}</a>
 </p>
+{%endif%}
 
 <p><a href="#" onclick="document.getElementById('ADVANCED').style.display = 'inherit';return false;">Advanced</a></p>
 

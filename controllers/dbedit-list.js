@@ -13,6 +13,7 @@ module.exports = {
 		const queryPageTitle = req.query.pageTitle;
 		const queryDisplayName = req.query.displayName;
 		const querySaveParams = req.query.saveParams || "";
+		const showAddButton = req.query.showAddButton || "Y";
 
 
 		// this replaces the db query
@@ -99,6 +100,7 @@ module.exports = {
 			saveParams: querySaveParams,
 			pageTitle: pageTitle,
 			modelName: modelName,
+			showAddButton: showAddButton,
 			modelDisplayName: modelDisplayName,
 			filter: JSON.stringify(queryFilter),
 			sort: JSON.stringify(querySort)

@@ -1,5 +1,6 @@
 'use strict';
 
+
 module.exports = {
 	get: function(req, res) {
 		var modelStr = req.query.model;
@@ -8,14 +9,37 @@ module.exports = {
 		var querySaveView = req.query.saveView;
 		var queryDisplayName = req.query.displayName;
 
+		const filterCols = (req.query.filterCols && req.query.filterCols.split(','));
+		const readOnly = (req.query.readOnly && req.query.readOnly.split(','));
+
+		const readOnlyMap = readOnly && readOnly.reduce(function(map, obj) {
+		    map[obj] = obj;
+		    return map;
+		}, {});
+
 		var model = web.cms.dbedit.utils.searchModel(modelStr);
-		var modelAttr = model.getModelDictionary();
+		// deep clone
+		var modelAttr = JSON.parse(JSON.stringify(model.getModelDictionary()));
 		var modelSchema = modelAttr.schema;
+
 		var modelName = modelAttr.name;
 		var modelDisplayName = queryDisplayName || modelAttr.displayName || modelAttr.name;
 
+		if (filterCols) {
+			for (let [key, val] of Object.entries(modelSchema)) {
+				if (filterCols.indexOf(key) == -1) {
+					delete modelSchema[key];
+				}
+			}
+		}
+		
 		for (var i in modelSchema) {
-			var attr = modelSchema[i];
+			var colName = i;
+			var attr = modelSchema[colName];
+
+			// if (filterCols && filterCols.indexOf(colName) == -1) {
+			// 	delete modelSchema[colName];
+			// }
 			attr.dbeditDisplay = web.cms.dbedit.utils.camelToTitle(i);
 		}
 
@@ -31,7 +55,13 @@ module.exports = {
 			}
 
 			var saveView = querySaveView || web.cms.dbedit.conf.saveView;
-			res.render(saveView, {rec: rec || {}, modelAttr: modelAttr, pageTitle: pageTitle, redirectAfter: redirectAfter});
+			res.render(saveView, {
+				rec: rec || {}, 
+				modelAttr: modelAttr, 
+				pageTitle: pageTitle, 
+				redirectAfter: redirectAfter,
+				readOnlyMap: readOnlyMap,
+			});
 		});
 	},
 

@@ -16,7 +16,12 @@
   
   <div class="form-group">
       <label>{{dbCol.dbeditDisplay}}</label>
+
+    {%if readOnlyMap[attr]%}
+      {%marked%}{{rec[attr]}}{%endmarked%}
+    {%else%}
       <input class="form-control" name="{{attr}}" value="{{rec[attr]}}">
+    {%endif%}
   </div>
 
 {%endfor%}
