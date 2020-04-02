@@ -10,7 +10,7 @@ module.exports = {
 		var modelSchema = modelAttr.schema;
 		var modelName = modelAttr.name;
 
-		var redirectAfter = req.query.redirectAfter;
+		var redirectAfter = req.query._backUrl;
 
 		//can be optimized by avoiding query if there's no id
 		model.findOne({_id:recId}, function(err, rec) {

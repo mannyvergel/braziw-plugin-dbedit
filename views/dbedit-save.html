@@ -1,26 +1,45 @@
-{% extends _cms.conf.adminTemplate %}
+{%set isUpdateMode = rec._id%}
+
+{% extends parentTemplate %}
+
+{% block head %}
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+{% endblock %}
 
 {% block content %}
 {{super()}}
 
-<a href="{{redirectAfter}}"  class="btn btn-default">Back</a>
-<br/><br/>
-
 <form method="post">
   <input type="hidden" name="_csrf" value="{{_csrf}}" />
   <input type="hidden" name="_id" value="{{rec._id}}" />
-  <input type="hidden" name="modelName" value="{{modelAttr.name}}" />
-  <input type="hidden" name="redirectAfter" value="{{redirectAfter}}" />
+  <input type="hidden" name="modelName" value="{{queryModelName}}" />
+  <input type="hidden" name="_backUrl" value="{{redirectAfter}}" />
 
-{%for attr, dbCol in modelAttr.schema%}
+{%for col in filterCols%}
+  {%set attr = col%}
+  {%set dbCol = modelAttr.schema[attr]%}
   
   <div class="form-group">
       <label>{{dbCol.dbeditDisplay}}</label>
 
-    {%if readOnlyMap[attr]%}
-      {%marked%}{{rec[attr]}}{%endmarked%}
+    {%if readOnlyMap[attr] or (isUpdateMode and colMap[attr].readOnlyMap and colMap[attr].readOnlyMap.U) or ( (not isUpdateMode) and colMap[attr].readOnlyMap and colMap[attr].readOnlyMap.I)%}
+      {%marked%}{%if colMap[attr].lookup%}{{colMap[attr].lookup[rec[attr]]}}{%else%}{{rec[attr]}}{%endif%}{%endmarked%}
+    {%elif colMap[attr].inputType == 'select'%}
+      <select class="form-control" name="{{attr}}" value="{{rec[attr]}}"{%if dbCol.required or colMap[attr].required%} required{%endif%}>
+        {%for opt in colMap[attr].inputValues%}
+        <option value="{{opt.key}}"{%if (rec[attr].equals and rec[attr].equals(opt.key) or (rec[attr] == opt.key))%} selected{%endif%}>{{opt.val}}</option>
+        {%endfor%}
+      </select>
+    {%elif colMap[attr].inputType == 'date'%}
+      <input class="flatpickr-date form-control" name="{{attr}}" value="{{rec[attr] | date('MM/DD/YYYY')}}" placeholder="MM/DD/YYYY"{%if dbCol.required or colMap[attr].required%} required{%endif%}>
+
+    {%elif colMap[attr].inputType == 'datetime'%}
+      <input class="flatpickr-datetime form-control" name="{{attr}}" value="{{rec[attr] | date('MM/DD/YYYY hh:mm A', 'Asia/Manila')}}" placeholder="MM/DD/YYYY hh:mm A"{%if dbCol.required or colMap[attr].required%} required{%endif%}>
+    {%elif colMap[attr].inputType == 'email'%}
+      <input type="email" class="form-control" name="{{attr}}" value="{{rec[attr]}}"{%if dbCol.required or colMap[attr].required%} required{%endif%}>
+
     {%else%}
-      <input class="form-control" name="{{attr}}" value="{{rec[attr]}}">
+      <input class="form-control" name="{{attr}}" value="{{rec[attr]}}"{%if dbCol.required or colMap[attr].required%} required{%endif%}{%if colMap[attr].placeholder%} placeholder="{{colMap[attr].placeholder}}"{%endif%}>
     {%endif%}
   </div>
 
@@ -28,10 +47,29 @@
 
   <button type="submit" class="btn btn-primary">Save</button>
 
-  {%if rec._id%}
-  <a href="/admin/dbedit/delete?_id={{rec._id}}&model={{modelAttr.name}}&redirectAfter={{redirectAfter}}" class="btn btn-danger" onclick="return confirm('Do you want to delete this record?')" style="float:right;">Delete</a>
+  {%if isUpdateMode and shouldShowDeleteAction == 'Y'%}
+  <a href="delete?_id={{rec._id}}&model={{queryModelName}}&_backUrl={{redirectAfter}}" class="btn btn-danger" onclick="return confirm('Do you want to delete this record?')" style="float:right;">Delete</a>
   {%endif%}
 
 </form>
+
+
+
+{% endblock %}
+
+{% block beforeEndBody %}
+
+
+<script src="//cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<script>
+  $(function() {
+    $(".flatpickr-date").flatpickr({dateFormat: 'm/d/Y', allowInput: true});
+    $(".flatpickr-datetime").flatpickr({dateFormat: 'm/d/Y h:i K', enableTime: true, allowInput: true});
+  })
+</script>
+
+<script src="/public/js/unsaved-changes-prompt.js"></script>
+<script src="/public/js/unsaved-changes-prompt-all.js"></script>
 
 {% endblock %}

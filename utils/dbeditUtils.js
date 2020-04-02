@@ -29,3 +29,15 @@ exports.getModelConf = function(modelName) {
 
 	return null;
 }
+
+exports.dbeditListController = require('./dbeditListController.js');
+
+exports.dbeditSaveController = require('./dbeditSaveController.js');
+
+
+
+
+
+
+
+

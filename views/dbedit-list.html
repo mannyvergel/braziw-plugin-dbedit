@@ -1,6 +1,7 @@
-{% extends _cms.conf.adminTemplate %}
+{% extends parentTemplate %}
 
 {% block head %}
+
 <style>
 i.dbedit {
 	font-size: 18px;
@@ -8,22 +9,59 @@ i.dbedit {
 </style>
 
 <script>
-  function setGetParam(key,value) {
+  function setGetParam(paramMap, hashOrFragment) {
 
     var params = new URLSearchParams(window.location.search);
-    params.set(key, value);
-    var newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?' + params.toString();
+    for (key in paramMap) {
+      params.set(key, paramMap[key]);
+    }
+
+    var fragmentStr = "";
+    if (hashOrFragment) {
+      fragmentStr = "#" + hashOrFragment;
+    } else if (window.location.hash) {
+      fragmentStr = window.location.hash;
+    }
+    var newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?' + params.toString() + fragmentStr;
 
     window.location.href = newUrl;
 
   }
 
-  function goSort() {
-    setGetParam('sort', document.getElementById('SORT').value);
+  function getAllSearchInput() {
+    return $('#frmSearch').find("input[type=text], textarea, select");
   }
 
-  function goFilter() {
-    setGetParam('filter', document.getElementById('FILTER').value);
+  function goSearch() {
+    var paramMap = {};
+    getAllSearchInput().each(function() {
+      var jObj = $(this);
+      paramMap[jObj.attr('name')] = jObj.val();
+    });
+
+    // reset page number to 1
+    paramMap['{{tableId}}_p'] = '1';
+
+    setGetParam(paramMap, 'SEARCH_LOC');
+  }
+
+
+  function goSortColumn(col, sortVal, tableId) {
+    var sortMap = {};
+    sortMap[col] = sortVal;
+    setGetParam({'sort': JSON.stringify(sortMap)}, 'TABLE_LOC');
+  }
+
+  function goClearSearch() {
+    getAllSearchInput().each(function() {
+      $(this).val('');
+    });
+    
+    goSearch();
+  }
+
+  function goSort() {
+    setGetParam({'sort': document.getElementById('SORT').value});
   }
 </script>
 {% endblock %}
@@ -33,31 +71,53 @@ i.dbedit {
 
 {%if showAddButton == 'Y'%}
 <p>
-  <a class="btn btn-primary" href="/admin/dbedit/save?model={{modelName}}&redirectAfter={{redirectAfter}}&{{saveParams}}"><i class="fa fa-plus fa-fw"></i> {{modelDisplayName}}</a>
+  <a class="btn btn-primary" href="{{saveUrl}}?model={{queryModelName}}&_backUrl={{redirectAfter}}&{{saveParams}}"><i class="fa fa-plus fa-fw"></i> Add {{modelDisplayName}}</a>
 </p>
 {%endif%}
 
-<p><a href="#" onclick="document.getElementById('ADVANCED').style.display = 'inherit';return false;">Advanced</a></p>
-
-<div id="ADVANCED" style="display:none">
-
-<div class="input-group">
-  <label>Filter:</label> 
-
-  <input id="FILTER" name="filter" type="text" value="{{filter}}" class="form-control" />
-
-</div>
-
-<p><button type="button" class="btn btn-secondary" onclick="goFilter()">Go</button></p>
-
-
-<div class="input-group">
-  <label>Sort:</label> <input id="SORT" name="sort" type="text" value="{{sort}}" class="form-control" />
+<a name="SEARCH_LOC"></a>
+{%if searchable.length > 0%}
+<form id="frmSearch" name="frmSearch" style="{{searchableStyle}}">
   
-</div>
-<p><button type="button" class="btn btn-secondary" onclick="goSort()">Go</button></p>
+    <div class="form-row">
 
-</div>
+          
+        {%for searchObj in searchable%}
+        <div class="form-group col-md-6">
+              <label for="f_{{searchObj.id}}">{{searchObj.label}}</label>
+          {%if searchObj.inputType == "select"%}
+            <select class="form-control" name="f_{{searchObj.id}}" id="f_{{searchObj.id}}">
+              {%for opt in searchObj.inputValues%}
+              <option value="{{opt.key}}"{%if (searchObj.val.equals and searchObj.val.equals(opt.key) or (searchObj.val == opt.key))%} selected{%endif%}>{{opt.val}}</option>
+              {%endfor%}
+            </select>
+          {%else%}
+              <input type="text" name="f_{{searchObj.id}}" id="f_{{searchObj.id}}" class="form-control" placeholder="{{searchObj.placeholder}}" value="{{searchObj.val}}" />
+          {%endif%}
+          </div>
+        {%endfor%}
+          
+
+      
+      </div>
+
+      <div class="row">
+        <div class="col-md">
+          <button class="btn btn-primary" type="button" onclick="goSearch(); return false;"><i class="fa fa-search"></i> </span> Search</button>
+
+        <button class="btn btn-secondary" type="button" onclick="goClearSearch(); return false;" style="float: right;">Clear</button>
+        </div>
+      </div>
+
+
+</form>
+
+<br/>
+
+{%endif%}
+
+<a name="TABLE_LOC"></a>
+<div style="margin-bottom: 12px;">Total: {{count.toLocaleString()}}</div>
 
 {{table | safe}}
 
