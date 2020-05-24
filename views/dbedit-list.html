@@ -4,7 +4,7 @@
 
 <style>
 i.dbedit {
-	font-size: 18px;
+  font-size: 18px;
 }
 </style>
 
@@ -47,9 +47,16 @@ i.dbedit {
 
 
   function goSortColumn(col, sortVal, tableId) {
+
+    var paramMap = {};
+
     var sortMap = {};
     sortMap[col] = sortVal;
-    setGetParam({'sort': JSON.stringify(sortMap)}, 'TABLE_LOC');
+
+    paramMap['sort'] = JSON.stringify(sortMap);
+    paramMap['{{tableId}}_p'] = '1';
+
+    setGetParam(paramMap, 'TABLE_LOC');
   }
 
   function goClearSearch() {
@@ -63,62 +70,154 @@ i.dbedit {
   function goSort() {
     setGetParam({'sort': document.getElementById('SORT').value});
   }
+
+  function showSearchFields(isShown, doNotFocus) {
+    $('#frmSearch').css('display', isShown ? '' :'none' );
+
+    if (isShown) {
+      if (!doNotFocus) {
+        $('#frmSearch').find(':input:enabled:visible:first').focus();
+      }
+      $('#show-search-caret').addClass('fa-caret-down');
+      $('#show-search-caret').removeClass('fa-caret-right');
+    } else {
+       
+      $('#show-search-caret').addClass('fa-caret-right');
+      $('#show-search-caret').removeClass('fa-caret-down');
+    }
+  }
+
+  function changeRowsPerPage(rowsPerPageVal, tableId) {
+    if (isNaN(rowsPerPageVal)) {
+      return;
+    }
+
+    var paramMap = {};
+    paramMap[tableId + '_rowsPerPage'] = rowsPerPageVal;
+    paramMap['{{tableId}}_p'] = '1';
+    setGetParam(paramMap);
+  }
+
+  function onChangeRowsPerPage(tableId) {
+    var rowsPerPageVal = $('#S_ROWS_PER_PAGE').val();
+     
+    changeRowsPerPage(rowsPerPageVal, tableId);
+  }
+
+  function toggleSearchDisplay() {
+    showSearchFields($('#frmSearch').css('display') === 'none');
+  }
+
 </script>
 {% endblock %}
 
 {% block content %}
 {{super()}}
 
-{%if showAddButton == 'Y'%}
+{%if showAddButton%}
 <p>
-  <a class="btn btn-primary" href="{{saveUrl}}?model={{queryModelName}}&_backUrl={{redirectAfter}}&{{saveParams}}"><i class="fa fa-plus fa-fw"></i> Add {{modelDisplayName}}</a>
+  <a class="btn btn-primary" href="{{addUrl}}?model={{queryModelName}}&_backUrl={{redirectAfter}}&{{saveParams}}"><i class="fa fa-plus fa-fw"></i> Add {{modelDisplayName}}</a>
 </p>
 {%endif%}
 
-<a name="SEARCH_LOC"></a>
-{%if searchable.length > 0%}
-<form id="frmSearch" name="frmSearch" style="{{searchableStyle}}">
-  
-    <div class="form-row">
 
+{%if searchable.visibleLength > 0%}
+
+<a name="SEARCH_LOC"></a>
+
+<div><button id="show-search-btn" class="btn btn-link p-0 pb-2" type="button" onclick="toggleSearchDisplay();" style="text-decoration: none;"><i id="show-search-caret" class="fa fa-caret-right" style="position: relative; width: 10px; text-align: left;"></i> Show Search</button></div>
+
+
+<form id="frmSearch" name="frmSearch" style="{%if not searchable.hasSearchVal%}display: none;{%endif%} {{searchableStyle}}">
+  
           
-        {%for searchObj in searchable%}
-        <div class="form-group col-md-6">
+    {%for searchObj in searchable%}
+
+      {%if not searchObj.hidden%}
+
+        {%if searchObj.attachToPrevious%}
+          </div><div class="form-group col">
+        {%else%}
+          {%if loop.index != 1%}</div></div>{%endif%}
+
+          <div class="form-row">
+          <div class="form-group col">
+        {%endif%}
+
+       
               <label for="f_{{searchObj.id}}">{{searchObj.label}}</label>
           {%if searchObj.inputType == "select"%}
             <select class="form-control" name="f_{{searchObj.id}}" id="f_{{searchObj.id}}">
-              {%for opt in searchObj.inputValues%}
-              <option value="{{opt.key}}"{%if (searchObj.val.equals and searchObj.val.equals(opt.key) or (searchObj.val == opt.key))%} selected{%endif%}>{{opt.val}}</option>
+              {%for key, val in searchObj.inputValuesComputed%}
+              <option value="{{key}}"{%if (searchObj.val.equals and searchObj.val.equals(key) or (searchObj.val == key))%} selected{%endif%}>{{val}}</option>
               {%endfor%}
             </select>
           {%else%}
               <input type="text" name="f_{{searchObj.id}}" id="f_{{searchObj.id}}" class="form-control" placeholder="{{searchObj.placeholder}}" value="{{searchObj.val}}" />
           {%endif%}
-          </div>
-        {%endfor%}
           
+        
 
+        {%if loop.last%} 
+        </div></div>
+        {%endif%}
+
+
+        {%endif%}
+      {%endfor%}
       
-      </div>
+      
+      
+      
 
       <div class="row">
         <div class="col-md">
-          <button class="btn btn-primary" type="button" onclick="goSearch(); return false;"><i class="fa fa-search"></i> </span> Search</button>
+          <button class="btn btn-outline-primary" type="submit" onclick="goSearch(); return false;"><i class="fa fa-search"></i> </span> Search</button>
 
-        <button class="btn btn-secondary" type="button" onclick="goClearSearch(); return false;" style="float: right;">Clear</button>
+        <button class="btn btn-outline-secondary" type="button" onclick="goClearSearch(); return false;" style="float: right;">Clear</button>
         </div>
       </div>
 
 
 </form>
+{%if searchable.hasSearchVal%}
+<script type="text/javascript">
+  $(function() {
+    showSearchFields(true, true);
+  })
+</script>
+{%endif%}
 
 <br/>
 
 {%endif%}
 
 <a name="TABLE_LOC"></a>
-<div style="margin-bottom: 12px;">Total: {{count.toLocaleString()}}</div>
 
-{{table | safe}}
+<div class="clearfix">
+  {{table | safe}}
+
+  <div class="form-inline pull-right" style="margin-bottom: 12px; display: inline-block;">
+    {%if showExport%}
+    <form method="post" class="form-inline" style="display: inline;">
+      <input type="hidden" name="_csrf" value="{{_csrf}}">
+
+      <button name="_ACTION_EXPORT_CSV" class="btn btn-link btn-sm" type="submit">Export to CSV</button>
+    </form>
+    |
+    {%endif%}
+    Total: {{count and count.toLocaleString()}} 
+    | 
+    Rows Per Page: <select class="form-control form-control-sm" id="S_ROWS_PER_PAGE" onchange="onChangeRowsPerPage('{{tableId}}')">
+
+      {%for rowCount in rowsPerPageSelectVals%}
+      <option value="{{rowCount}}"{%if rowsPerPage == rowCount%} selected{%endif%}>{{rowCount.toLocaleString()}}</option>
+      {%endfor%}
+    </select>
+    
+  </div>
+
+</div>
+
 
 {% endblock %}

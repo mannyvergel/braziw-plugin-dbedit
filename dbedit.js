@@ -19,6 +19,9 @@ module.exports = function DbEdit(pluginConf, web, next) {
   var self = this;
   web.cms.dbedit = self;
   web.cms.dbedit.utils = dbeditUtils;
+  web.cms.dbedit.csvUtils = require('./utils/csvUtils.js');
+  web.cms.dbedit.searchUtils = require('./utils/searchUtils.js');
+
   this.conf = pluginConf;
 
   web.addRoutes(require('./conf/routes.js'));
