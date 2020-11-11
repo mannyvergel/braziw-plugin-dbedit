@@ -12,6 +12,7 @@ module.exports = function DbEdit(pluginConf, web, next) {
       addToMenu: true,
       updateDtCol: 'updateDt',
       updateByCol: 'updateBy',
+      enableDangerousClientFiltering: false,
       models: [],
     },
     pluginConf);

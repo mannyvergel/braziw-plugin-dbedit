@@ -2,4 +2,8 @@
 
 const dbeditUtils = require('../utils/dbeditUtils.js');
 
-module.exports = dbeditUtils.dbeditListController();
+const pluginConf = web.plugins['braziw-plugin-dbedit'].conf;
+
+module.exports = dbeditUtils.dbeditListController({
+  enableDangerousClientFiltering: pluginConf.enableDangerousClientFiltering,
+});
