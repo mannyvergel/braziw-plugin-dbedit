@@ -5,6 +5,8 @@ const mongoose = web.require('mongoose');
 const Schema = mongoose.Schema,
     ObjectId = Schema.ObjectId;
 
+const OTHERS = {key: 'OTH', value: 'Others'};
+
 module.exports = function({
   modelName,
   displayName,
@@ -12,6 +14,9 @@ module.exports = function({
   colMap = {},
   enableDangerousClientFiltering = false,
   style,
+
+  addPermission,
+  editPermission,
 
   populate,
 
@@ -23,6 +28,7 @@ module.exports = function({
 
   parentTemplate,
   shouldShowDeleteAction = true,
+  shouldShowSaveButton = true,
 
   additionalSubmitButtons = [],
 
@@ -51,26 +57,29 @@ module.exports = function({
         }
       }
 
-      let filterCols = (colIds.length > 0 ? colIds : null) 
-        || (enableDangerousClientFiltering && req.query.filterCols && req.query.filterCols.split(','));
-
-      const readOnly = (enableDangerousClientFiltering && req.query.readOnly && req.query.readOnly.split(','));
-
-      shouldShowDeleteAction = shouldShowDeleteAction || (enableDangerousClientFiltering && req.query.shouldShowDeleteAction);
-
       let model = web.cms.dbedit.utils.searchModel(modelStr);
       // deep clone
       let modelAttr = model.getModelDictionary();
       let modelSchema = modelAttr.schema;
 
+      let filterCols = (colIds.length > 0 ? colIds : null) 
+        || (enableDangerousClientFiltering && req.query.filterCols && req.query.filterCols.split(','))
+        || Object.keys(modelSchema);
+
+      for (let colId of filterCols) {
+        if (!colMap[colId]) {
+          colMap[colId] = {};
+        }
+      }
+
+      const readOnly = (enableDangerousClientFiltering && req.query.readOnly && req.query.readOnly.split(','));
+
+      shouldShowDeleteAction = shouldShowDeleteAction || (enableDangerousClientFiltering && req.query.shouldShowDeleteAction);
+
       let myModelName = modelAttr.name;
       let modelDisplayName = queryDisplayName || modelAttr.displayName || modelAttr.name;
 
       parentTemplate = parentTemplate || web.cms.conf.adminTemplate;
-
-      if (!filterCols) {
-        filterCols = Object.keys(modelSchema);
-      }
       
       let redirectAfter = req.query._backUrl 
         || ('/admin/dbedit/list' 
@@ -90,7 +99,12 @@ module.exports = function({
           return;
         }
       }
-      
+
+      if (req.session.recCache 
+      && req.session.recCache[req.url]) {      
+        rec = req.session.recCache[req.url];
+        req.session.recCache[req.url] = null;
+      }
 
       let pageTitle = null;
       
@@ -106,12 +120,36 @@ module.exports = function({
         if (colMapObj.default && rec[colName] === undefined) {
           rec[colName] = colMapObj.default;
         }
+
+        if (colMapObj.colSpan) {
+          colMapObj.colSpanStr = '-' + colMapObj.colSpan.toString();
+        }
+
+        if (colMapObj.inline) {
+          colMapObj.inlineStr = " form-check-inline mr-2";
+        }
+
+        if (colMapObj.hideLabel === true) {
+          colMapObj._hideLabel = colMapObj.hideLabel;
+        } else {
+          colMapObj._hideLabel = false;
+        }
+
+        if (colMapObj.addOthers) {
+          colMapObj._addOthers = Object.assign({
+            value: getVal(rec, colMapObj.addOthers.id),
+            placeholder: 'If Others, please specify'
+          }, colMapObj.addOthers);
+        }
+
+        if (colMapObj._addOthers) {
+          colMapObj.inputValues.set(OTHERS.key, OTHERS.value)
+        }
         
         handleModelSchemaForColObj(modelSchema, colName, colMap, rec)
 
-
         if (handlers[colName]) {
-          colMapObj.htmlValue = await handlers[colName](rec, isUpdateMode);
+          colMapObj.htmlValue = await handlers[colName](rec, isUpdateMode, req);
         }
 
 
@@ -123,18 +161,23 @@ module.exports = function({
         }
 
         if (colMapObj.inputValuesFunc) {
-          colMapObj.inputValues = await colMapObj.inputValuesFunc(rec, req);
+          colMapObj.inputValues = await colMapObj.inputValuesFunc(rec, req, isInsertMode);
         }
 
         colMapObj.readOnlyComputed = (readOnly && readOnly.indexOf(colName) !== -1)
           || (colMapObj.readOnly === 'U' && isUpdateMode)
           || (colMapObj.readOnly === 'I' && isInsertMode)
-          || (web.objectUtils.isFunction(colMapObj.readOnly) && await colMapObj.readOnly(rec, req))
+          || (web.objectUtils.isFunction(colMapObj.readOnly) && await colMapObj.readOnly(rec, req, isInsertMode))
           || colMapObj.readOnly === true;
 
         colMapObj.visibleComputed = true;
         if (colMapObj.visible !== undefined) {
-          colMapObj.visibleComputed = await colMapObj.visible(rec, req);
+          colMapObj.visibleComputed = await colMapObj.visible(rec, req, isInsertMode);
+        }
+
+        if (colMapObj.header) {
+          colMapObj.headerComputed = (web.objectUtils.isFunction(colMapObj.header) && await colMapObj.header(rec, req, isInsertMode))
+          || colMapObj.header;
         }
 
         let propsStrArr = [];
@@ -169,6 +212,13 @@ module.exports = function({
 
       }
 
+      let myShowSaveButton = true;
+      if (isUpdateMode && shouldShowSaveButton !== undefined) {
+        myShowSaveButton = 
+          (web.objectUtils.isFunction(shouldShowSaveButton) && await shouldShowSaveButton(rec, req, isInsertMode))
+          || shouldShowSaveButton === true;
+      }
+
       for (let submitBtnObj of additionalSubmitButtons) {
         submitBtnObj.visibleComputed = true;
 
@@ -176,6 +226,8 @@ module.exports = function({
           submitBtnObj.visibleComputed = await submitBtnObj.visible(rec, req, isInsertMode);
         }
       }
+
+      let fileBackUrl = encodeURIComponent(req.url);
 
       let options = {
         rec: rec, 
@@ -185,10 +237,12 @@ module.exports = function({
         queryModelName: queryModel,
         pageTitle: pageTitle, 
         redirectAfter: redirectAfter,
+        fileBackUrl: fileBackUrl,
         colMap: colMap,
         parentTemplate: parentTemplate,
         filterCols: filterCols,
         shouldShowDeleteAction: shouldShowDeleteAction,
+        shouldShowSaveButton: myShowSaveButton,
         additionalSubmitButtons: additionalSubmitButtons,
       };
 
@@ -215,10 +269,20 @@ module.exports = function({
 
       let isInsertMode = !recId;
 
+      if (isInsertMode) {
+        if (addPermission && !req.user.hasPermission(addPermission)) {
+          throw new Error("You don't have a permission to add this record.");
+        }
+      } else {
+        if (editPermission && !req.user.hasPermission(editPermission)) {
+          throw new Error("You don't have a permission to edit this record.");
+        }
+      }
+
+
       let model = web.models(myModelName);
     
       let rec = await save(recId, req, res, model, beforeSave, colMap, isInsertMode, queryModelName);
-
       if (!rec) {
         return;
       }
@@ -272,11 +336,20 @@ async function save(recId, req, res, model, beforeSave, colMap, isInsertMode, qu
       if (shouldSetProperTimezone && dbCol.type == Date) {
 
         if (attrToSet[colName]) {
+          let date = attrToSet[colName];
+
           let dateFormat = 'MM/DD/YYYY'; 
 
           if (colMap[colName] && colMap[colName].inputType === "datetime") {
             dateFormat = 'MM/DD/YYYY hh:mm A';
           }
+
+          if (!web.ext.dateTimeUtils.momentFromString(date, dateFormat).isValid()) {
+            req.flash('error', `${colMap[colName].label} is an invalid date.`);
+            res.redirect(req.url);
+            return;
+          }
+
           attrToSet[colName] = moment.tz(attrToSet[colName], dateFormat, web.conf.timezone).toDate();
         } else if (attrToSet[colName] === "") {
           attrToSet[colName] = null;
@@ -312,7 +385,8 @@ async function save(recId, req, res, model, beforeSave, colMap, isInsertMode, qu
     console.error("beforeSave threw an error", ex);
     let errStr = ex.message || "Error on saving record.";
     req.flash('error', errStr);
-    res.redirect(getRedirectAfter(rec, req, queryModelName));  
+    req.session.recCache[req.url] = req.body;
+    res.redirect(req.url);  
     
     return null;
   }
@@ -343,7 +417,7 @@ function handleModelSchemaForColObj(modelSchema, colName, colMap, rec) {
     }
     colMapObj.required = colMapObj.required || attr.required;
 
-    colMapObj.label = colMapObj.label || attr.dbeditDisplay || web.cms.dbedit.utils.camelToTitle(colName);
+    colMapObj.label = colMapObj.label == null ? attr.dbeditDisplay || web.cms.dbedit.utils.camelToTitle(colName) : colMapObj.label;
   }
 }
 
@@ -365,23 +439,32 @@ function handleColObjMultiple(colMapObj, colName, rec) {
 
   if (colMapObj.multiple) {
     colMapObj.inputName = colName + '[]';
-    if (!colMapObj.copies) {
+    colMapObj._copies = colMapObj.copies;
+    if (!colMapObj._copies) {
       if (colMapObj.inputType === 'checkbox') {
-        colMapObj.copies = 1;
+        colMapObj._copies = 1;
       } else {
-        colMapObj.copies = 3;
+        colMapObj._copies = 3;
       }
       
     }
 
     if (rec[colName]
-      && rec[colName].length > colMapObj.copies
+      && rec[colName].length > colMapObj._copies
       && colMapObj.inputType !== 'checkbox') {
-      colMapObj.copies = rec[colName].length;
+      colMapObj._copies = rec[colName].length;
     }
     
   } else {
     colMapObj.inputName = colName;
-    colMapObj.copies = colMapObj.copies || 1;
+    colMapObj._copies = colMapObj._copies || 1;
+  }
+}
+
+function getVal(recObj, key) {
+  if (key.indexOf('.') == -1) {
+    return recObj[key];
+  } else {
+    return web.objectUtils.resolvePath(recObj, key);
   }
 }

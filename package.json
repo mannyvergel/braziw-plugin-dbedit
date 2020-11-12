@@ -1,6 +1,6 @@
 {
   "name": "braziw-plugin-dbedit",
-  "version": "7.5.0",
+  "version": "7.6.0",
   "description": "Braziw js Mongo DB object editor / scaffolding.",
   "keywords": [
     "braziw",

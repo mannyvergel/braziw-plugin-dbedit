@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script type="text/javascript">
   function dbeditAddMore(colName) {
-    var inputCol = document.getElementsByName(colName)[0];
+    var inputCol = $(`[name="${colName}"]`).not('[type="hidden"]')[0];
     var oCopy = $(inputCol).clone();
     oCopy.val("");
     
@@ -50,7 +50,6 @@
       onChangeCheckNonSelectAll(self);
     });
   })
-
 </script>
 {% endblock %}
 
@@ -68,6 +67,7 @@
 {%endif%}
   <input type="hidden" name="_backUrl" value="{{redirectAfter}}" />
 
+{%set unclosedRowDiv = false%}
 {%for colName in filterCols%}
 
   {%set dbCol = modelAttr.schema[colName]%}
@@ -79,30 +79,82 @@
   {%set isColRequired = colMap[colName].required%}
   {%set isColVisible = colMap[colName].visibleComputed%}
 
-  {%set copies = colMap[colName].copies%}
+  {%set copies = colMap[colName]._copies%}
   {%set isMultiple = colMap[colName].multiple%}
- 
+
+  {%set isSectionStart = colMap[colName].section == 'start'%}
+  {%set isSectionEnd = colMap[colName].section == 'end'%}
+  {%set isSectionVisible = colMap[colName].sectionVisible%}
+
+  {%set header = colMap[colName].headerComputed%}
+  {%set headerFor = colMap[colName].for%}
+
 {%if isColVisible%}
 
-{%if colMap[colName].attachToPrevious%}
-  </div><div class="col-sm">
-{%else%}
-  {%if loop.index != 1%}</div></div>{%endif%}
+{%if colMap[colName].section%}
+  {%if unclosedRowDiv%}
+    </div>
+  {%endif%}
+  
+  {%if isSectionStart%}
+    <div id="{{attrName}}" {%if not sectionVisible%}style="visibility: hidden; position: absolute"{%endif%}>
+  {%elif isSectionEnd%}
+    </div>
+  {%endif%}
 
-  <div class="row">  
-  <div class="col-sm">
+  {%set unclosedRowDiv = false%}
+{%else%}
+
+{%if colMap[colName].attachToPrevious%}
+ 
+{%else%}
+  {%if unclosedRowDiv%}
+    </div>
+  {%endif%}
+
+  <div class="row">
+    {%set unclosedRowDiv = true%}
 {%endif%}
+
+    
+  <div class="col-sm{{colMap[colName].colSpanStr}}">
 
 
   <div class="form-group">
-    {%if colLabel%}
-      <label>{{colLabel}} {%if isColRequired and not isColReadOnly%}<super class="text-danger">*</super>{%endif%}</label>
+    {%if colLabel and not colMap[colName]._hideLabel%}
+      <label>{{colLabel | safe}} {%if isColRequired and not isColReadOnly and colLabel != ' '%}<super class="text-danger">*</super>{%endif%}</label>
     {%endif%}
 
   {%set colVal = rec[colName]%}
   {%set htmlValue = colMap[colName].htmlValue%}
   {%set propsHtml = colMap[colName]._propsHtml%}
-   
+  {%set hasHiddenFile = false %}
+  
+    {%if inputType == 'file'%}
+
+      {%set itemNo = 1%}
+
+      {%set files = rec[colName]%}
+
+      {%if files and not files.length and files.length != 0%} {%set files = [files]%} {%endif%}
+
+      {%for file in files%}
+
+        {%set displayName = file.name or 'Uploaded file ' + itemNo %}
+        {%set hasHiddenFile = true %}
+
+        <div class="mb-2">
+          <a href="/shared/a/delete-file-buff?_id={{file._id}}&_backUrl={{fileBackUrl}}" class="text-danger" onclick="return confirm('Are you sure you want to delete {{displayName}}?')"><i class="fa fa-trash"></i></a>
+          <input type="hidden" name="{{attrName}}" value="{{file._id}}">
+          &nbsp;&nbsp;<a href="/serve-image-buff?_id={{file._id}}" target="_blank">{{displayName}}</a> 
+        </div>
+
+        {%set itemNo = itemNo + 1 %}
+
+      {%endfor%}
+
+    {%endif%}
+
   {% for i in range(0, copies) -%}
     <div class="mb-3">
 
@@ -114,15 +166,38 @@
       {%endif%}
     {%endif%}
 
-    {%if htmlValue%}
+    {%if header%}
+      <h3>{%if headerFor%}<button id="{{headerFor}}-btn" class="btn btn-link p-0 pb-2" type="button" style="text-decoration: none;"><i id="{{headerFor}}-caret" class="fa fa-caret-right" style="position: relative; width: 10px; text-align: left;"></i></button> {%endif%}{{header | safe}}</h3>
+      <script>
+        $("#{{headerFor}}-btn").on('click', function() {
+          const isShown = $("#{{headerFor}}").css('visibility') === 'visible';
+
+          // (display: none) will not send value
+          // but (visibility: hidden + position: absolute) will
+          $("#{{headerFor}}").css('visibility', isShown ? 'hidden' : 'visible');
+          $("#{{headerFor}}").css('position', isShown ? 'absolute' : 'static');
+
+          if (isShown) {
+            $("#{{headerFor}}-caret").removeClass('fa-caret-down');
+            $("#{{headerFor}}-caret").addClass('fa-caret-right');
+          } else {
+            $("#{{headerFor}}-caret").removeClass('fa-caret-right');
+            $("#{{headerFor}}-caret").addClass('fa-caret-down');
+          }
+        })
+      </script>
+    {%elif htmlValue%}
       {{htmlValue | safe}}
     {%elif isColReadOnly %}
 
       {% marked %}{% if colMap[colName].lookup %}{{ colMap[colName].lookup[colVal] }}{% elif colMap[colName].inputValues %}{{ colMap[colName].inputValues.get(colVal) }}{% else %}{{ colVal }}{% endif %}{% endmarked %}
 
+    {%elif inputType == 'textarea'%}
+      <textarea name="{{attrName}}" class="form-control" id="{{attrName}}"{%if colMap[colName].required%} required{%endif%} {{propsHtml | safe}}>{{colVal}}</textarea>
+
     {%elif inputType == 'select'%}
 
-      <select class="form-control" name="{{attrName}}" {%if colMap[colName].required%} required{%endif%}{{propsHtml | safe}}>
+      <select class="form-control" name="{{attrName}}" id={{attrName}} {%if colMap[colName].required%} required{%endif%} {{propsHtml | safe}}>
         {%for key, val in colMap[colName].inputValues%}
 
         <option value="{{key}}"{%if (colVal.equals and colVal.equals(key) or (colVal == key))%} selected{%endif%}>{{val}}</option>
@@ -132,39 +207,77 @@
 
     {%elif inputType == 'date'%}
 
-      <input class="flatpickr-date form-control" name="{{attrName}}" value="{{colVal | date('MM/DD/YYYY')}}" placeholder="MM/DD/YYYY"{%if colMap[colName].required%} required{%endif%}{{propsHtml | safe}}>
+      <input class="flatpickr-date form-control" name="{{attrName}}" id={{attrName}} value="{{colVal | date('MM/DD/YYYY')}}" placeholder="MM/DD/YYYY" autocomplete="off"{%if colMap[colName].required%} required{%endif%} {{propsHtml | safe}}>
 
     {%elif inputType == 'datetime'%}
 
-      <input class="flatpickr-datetime form-control" name="{{attrName}}" value="{{colVal | date('MM/DD/YYYY hh:mm A', 'Asia/Manila')}}" placeholder="MM/DD/YYYY hh:mm A"{%if colMap[colName].required%} required{%endif%}{{propsHtml | safe}}>
+      <input class="flatpickr-datetime form-control" name="{{attrName}}" id={{attrName}} value="{{colVal | date('MM/DD/YYYY hh:mm A', 'Asia/Manila')}}" placeholder="MM/DD/YYYY hh:mm A" autocomplete="off"{%if colMap[colName].required%} required{%endif%} {{propsHtml | safe}}>
+    
+    {%elif inputType == 'file'%}
+
+      <input placeholder="{{colMap[colName].placeholder}}" class="form-control" id="{{attrName}}" name="{{attrName}}" type="file"{%if colMap[colName].required and not hasHiddenFile%} required{%endif%}{%if colMap[colName].multiple%} multiple{%endif%} {{propsHtml | safe}}>
+
+    {%elif inputType == 'radio'%}
+
+    {%for key, val in colMap[colName].inputValues%}
+      <div class="form-check{{colMap[colName].inlineStr}}" id="{{attrName}}">
+        <input value="{{key}}" name="{{attrName}}" id="{{attrName}}_{{key}}" type="radio" class="form-check-input"{%if colMap[colName].required%} required{%endif%}{%if (colVal.equals and colVal.equals(key) or (colVal == key))%} checked{%endif%}>
+        <label class="form-check-label" for="{{attrName}}_{{key}}">
+          {{val | safe}}
+        </label>
+      </div>
+      {%endfor%}
+
 
     {%elif inputType == 'checkbox'%}
 
-      {%if colMap[colName].showSelectAll%}
-      <div class="form-check">
-          <input class="c-selectall form-check-input" type="checkbox" value="" id="c_SELECTALL_{{attrName}}">
-          <label class="form-check-label" for="c_SELECTALL_{{attrName}}"{{propsHtml | safe}}>
-            Select All
-          </label>
-        </div>
-      {%endif%}
-        
-      {# Need to do this because selecting none won't save it#}
-      <input type="hidden" value="" name="{{attrName}}"{{propsHtml | safe}}>
+      {%if colMap[colName].inputValues%}
 
-      {%for key, val in colMap[colName].inputValues%}
-
+        {%if colMap[colName].showSelectAll%}
         <div class="form-check">
-          <input name="{{attrName}}" class="form-check-input" type="checkbox" value="{{key}}" id="c_{{attrName}}_{{key}}"{%if colMap[colName].required%} required{%endif%}{%if rec[colName] and rec[colName].indexOf(key) != -1%} checked{%endif%}>
-          <label class="form-check-label" for="c_{{attrName}}_{{key}}">
-            {{val}}
-          </label>
-        </div>
+            <input class="c-selectall form-check-input" type="checkbox" value="" id="c_SELECTALL_{{attrName}}">
+            <label class="form-check-label" for="c_SELECTALL_{{attrName}}" {{propsHtml | safe}}>
+              Select All
+            </label>
+          </div>
+        {%endif%}
+          
+        {# Need to do this because selecting none won't save it#}
+        <input type="hidden" value="" name="{{attrName}}" {{propsHtml | safe}}>
 
-      {%endfor%}
+        {%for key, val in colMap[colName].inputValues%}
+          <div class="form-check" id="{{attrName}}">
+            <input name="{{attrName}}" class="form-check-input" type="checkbox" value="{{key}}" id="c_{{attrName}}_{{key}}"{%if colMap[colName].required%} required{%endif%}{%if rec[colName] and rec[colName].indexOf(key) != -1%} checked{%endif%}>
+            <label class="form-check-label" for="c_{{attrName}}_{{key}}">
+              {{val | safe}}
+            </label>
+          </div>
+
+        {%endfor%}
+
+        {%if colMap[colName]._addOthers%}
+          <div class="mt-1">
+            <input type="text" name="{{colMap[colName]._addOthers.id}}" id="{{colMap[colName]._addOthers.id}}" value="{{colMap[colName]._addOthers.value}}" placeholder="{{colMap[colName]._addOthers.placeholder}}" class="form-control" >
+          </div>
+          <script>
+            $(function() {
+              clearFormFields.addOnChangeEvent('input[name="{{attrName}}"]', '#c_{{attrName}}_OTH', 
+                ["#{{colMap[colName]._addOthers.id}}"]);
+            })
+          </script>
+        {%endif%}
+
+      {%else%}
+
+          <div class="form-check{{colMap[colName].inlineStr}}">
+            <input type="checkbox" class="form-check-input" id="{{attrName}}" name="{{attrName}}"{%if rec[colName]%} checked{%endif%}{%if colMap[colName].required%} required{%endif%} {{propsHtml | safe}}>
+            <label style="margin-left: 20px" class="form-check-label" for="{{attrName}}">{{colMap[colName].label | safe}}</label>
+          </div>
+
+      {%endif%}
 
     {%else%}
-      <input class="form-control" name="{{attrName}}" value="{{colVal}}"{%if colMap[colName].required%} required{%endif%}{%if colMap[colName].placeholder%} placeholder="{{colMap[colName].placeholder}}"{%endif%} {{propsHtml | safe}}>
+      <input class="form-control" name="{{attrName}}" id="{{attrName}}" value="{{colVal}}"{%if colMap[colName].required%} required{%endif%}{%if colMap[colName].placeholder%} placeholder="{{colMap[colName].placeholder}}"{%endif%} {{propsHtml | safe}}>
     {%endif%}
 
 
@@ -187,20 +300,26 @@
     </div>
   {%endif%}
 
+  {# closing of col div#}
+  </div>
 
-  {%if loop.last%}
-  </div></div>
-  {%endif%}
-
+{%endif%}
 {%endif%}
 {%endfor%}
 
-  
+{%if unclosedRowDiv%}
+ {#for closing the row of unattached#}
+ </div>
+ {%set unclosedRowDiv = false%}
+{%endif%}
+
+  {%if shouldShowSaveButton%}
   <div class="row">
     <div class="col mb-3">
       <button type="submit" class="btn btn-primary" name="_ACTION_SAVE">Save</button>
     </div>
   </div>
+  {%endif%}
 
    
    {%for submitBtnObj in additionalSubmitButtons%}
@@ -241,16 +360,9 @@
 
 <script src="//cdn.jsdelivr.net/npm/flatpickr"></script>
 
-<script>
-  $(function() {
-    $(".flatpickr-date").flatpickr({dateFormat: 'm/d/Y', allowInput: true});
-    $(".flatpickr-datetime").flatpickr({dateFormat: 'm/d/Y h:i K', enableTime: true, allowInput: true});
-  })
-</script>
+<script src="/dbe/public/js/setup-datepicker.js"></script>
 
-
-<script src="/public/js/unsaved-changes-prompt.js"></script>
-<script src="/public/js/unsaved-changes-prompt-all.js"></script>
-
+<script src="/dbe/public/js/unsaved-changes-prompt.js"></script>
+<script src="/dbe/public/js/unsaved-changes-prompt-all.js"></script>
 
 {% endblock %}

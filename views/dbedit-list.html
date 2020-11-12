@@ -206,7 +206,7 @@ i.dbedit {
     </form>
     |
     {%endif%}
-    Total: {{count and count.toLocaleString()}} 
+    Total: {{count | formatNum}} 
     | 
     Rows Per Page: <select class="form-control form-control-sm" id="S_ROWS_PER_PAGE" onchange="onChangeRowsPerPage('{{tableId}}')">
 

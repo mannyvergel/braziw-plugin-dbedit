@@ -5,17 +5,8 @@ var fs = require('fs');
 
 module.exports = function DbEdit(pluginConf, web, next) {
   var pluginPath = pluginConf.pluginPath;
-  pluginConf = web.utils.extend({
-      saveView: pluginPath + "/views/dbedit-save.html",
-      collectionsView: pluginPath + "/views/dbedit-collections.html",
-      listView: pluginPath + "/views/dbedit-list.html",
-      addToMenu: true,
-      updateDtCol: 'updateDt',
-      updateByCol: 'updateBy',
-      enableDangerousClientFiltering: false,
-      models: [],
-    },
-    pluginConf);
+
+  pluginConf = web.utils.extend(require('./conf/conf-dbedit.js'), pluginConf);
 
   var self = this;
   web.cms.dbedit = self;

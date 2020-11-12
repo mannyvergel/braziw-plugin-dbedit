@@ -26,11 +26,14 @@ module.exports = function({
   handlers,
 
   shouldShowDeleteAction = true,
+  shouldShowEditAction = true,
+
   editActionRedirect,
   editActionOnClick,
   parentTemplate,
   prefixActionCol = true,
   addUrl,
+  editUrl,
   saveUrl,
   colMap = {},
 
@@ -66,7 +69,25 @@ module.exports = function({
       const queryPageTitle = pageTitle || (req.query.pageTitle);
       const queryDisplayName = displayName || (req.query.displayName);
       const querySaveParams = (saveParams && web.objectUtils.isFunction(saveParams) ? await saveParams(req) : saveParams) || ((enableDangerousClientFiltering && req.query.saveParams) || "");
-      showAddButton = showAddButton || (enableDangerousClientFiltering && req.query.showAddButton === 'Y');
+      
+      let myShowAddButton;
+      if (showAddButton !== undefined) {
+        if (showAddButton.permission) {
+          myShowAddButton = req.user.hasPermission(showAddButton.permission);
+        } else {
+          myShowAddButton = showAddButton;
+        }
+      } else {
+        myShowAddButton = (enableDangerousClientFiltering && req.query.showAddButton === 'Y');
+      }
+
+      let myShouldShowEditAction;
+      if (shouldShowEditAction.permission) {
+        myShouldShowEditAction = req.user.hasPermission(shouldShowEditAction.permission);
+      } else {
+        myShouldShowEditAction = shouldShowEditAction;
+      }
+      
 
       parentTemplate = parentTemplate || web.cms.conf.adminTemplate;
 
@@ -77,7 +98,20 @@ module.exports = function({
       // this extends the db query
       const myQueryFilter = (enableDangerousClientFiltering && req.query.filter && JSON.parse(req.query.filter)) || await getQueryFilter(queryFilter, req);
 
-      const queryShouldShowDeleteAction = shouldShowDeleteAction || (enableDangerousClientFiltering && req.query.shouldShowDeleteAction === 'Y');
+      let queryShouldShowDeleteAction;
+
+      if (shouldShowDeleteAction !== undefined) {
+        if (shouldShowDeleteAction.permission) {
+          queryShouldShowDeleteAction = req.user.hasPermission(shouldShowDeleteAction.permission);
+        } else {
+          queryShouldShowDeleteAction = shouldShowDeleteAction  
+        }
+        
+      } else {
+        queryShouldShowDeleteAction = (enableDangerousClientFiltering && req.query.shouldShowDeleteAction === 'Y');
+      }
+
+      
       const queryEditActionRedirect = editActionRedirect || (enableDangerousClientFiltering && req.query.editActionRedirect);
       const queryEditActionOnClick = editActionOnClick || (enableDangerousClientFiltering && req.query.editActionOnClick);
 
@@ -101,14 +135,21 @@ module.exports = function({
       sortDefault[web.cms.dbedit.conf.updateDtCol] = -1;
 
       const tableId = getPrefix(model);
-      rowsPerPage = (req.query[tableId + '_rowsPerPage'] && parseInt(req.query[tableId + '_rowsPerPage']))
+      let _rowsPerPage = (req.query[tableId + '_rowsPerPage'] && parseInt(req.query[tableId + '_rowsPerPage']))
         || rowsPerPage || web.conf.defaultRowsPerPage;
 
       modelConf.sort = querySort || modelConf.sort || sortDefault;
 
       let myCols = [];
 
-      if (prefixActionCol) {
+      let myPrefixActionCol;
+      if (prefixActionCol.permissionsAny) {
+        myPrefixActionCol = req.user.hasAnyPermission(...prefixActionCol.permissionsAny);
+      } else {
+        myPrefixActionCol = prefixActionCol;
+      }
+
+      if (myPrefixActionCol) {
         myCols.push({id: '_action', style: 'text-align: center;', excludeExport: true});
       } 
 
@@ -135,7 +176,7 @@ module.exports = function({
 
 
       let myLabels = [];
-      if (prefixActionCol) {
+      if (myPrefixActionCol) {
         myLabels.push('Action');
       } 
 
@@ -158,22 +199,38 @@ module.exports = function({
         saveUrl = 'save';
       }
 
-      if (!addUrl) {
-        addUrl = saveUrl;
+      addUrl = addUrl || showAddButton.url || saveUrl;
+
+      if (!editUrl) {
+        editUrl = saveUrl;
       }
 
       let colIds = [];
-      for (let col of myCols || []) {
+      let myColCopy = [...myCols]; // prevent change of orig array during visibility checking
+      for (let col of myColCopy || []) {
         if (web.objectUtils.isString(col)) {
           colIds.push(col);
           colMap[col] = Object.assign({}, colMap[col]);
         } else {
-          colIds.push(col.id);
-          colMap[col.id] = Object.assign({}, col, colMap[col.id]);
+          let isVisible = true;
+          if (col.visible !== undefined) {
+            if (web.objectUtils.isFunction(col.visible)) {
+              isVisible = await col.visible(myCols, req);
+            } else {
+              isVisible = col.visible;
+            }
+          }
+          if (isVisible) {
+            colIds.push(col.id);
+            colMap[col.id] = Object.assign({}, col, colMap[col.id]); 
+          } else {
+            myCols.splice(myCols.indexOf(col), 1);
+          }
         }
       }
 
       if (colMap['_action'] && !myHandlers['_action']) {
+        const _csrf = req.csrfToken();
 
         myHandlers['_action'] = async function(record, column, opts) {
 
@@ -193,17 +250,17 @@ module.exports = function({
 
             let saveUrl = queryEditActionRedirect || 'save';
 
-            actionArr.push(
-`<a title="Edit" ${editActionOnClickStr} class="btn btn-link btn-flatten-m" href="${saveUrl}?_backUrl=${encodeURIComponent(req.url)}&_id=${record._id.toString()}${queryModelParam}"">
+            if (myShouldShowEditAction) {
+              actionArr.push(
+`<a title="Edit" ${editActionOnClickStr} class="btn btn-link btn-flatten-m" href="${editUrl}?_backUrl=${encodeURIComponent(req.url)}&_id=${record._id.toString()}${queryModelParam}"">
 <i class="fa fa-pencil"></i>
 </a>`
-            )
-
-            const _csrf = req.csrfToken();
+              )
+            }
 
             if (queryShouldShowDeleteAction) {
               actionArr.push(
-`<button title="Delete" name="ACTION_DELETE" type="submit" class="btn btn-link text-danger btn-flatten-m" onclick="return confirm(\'Are you sure you want to remove this course?\')">
+`<button title="Delete" name="ACTION_DELETE" type="submit" class="btn btn-link text-danger btn-flatten-m" onclick="return confirm(\'Are you sure you want to remove this ${modelDisplayName.toLowerCase()}?\')">
 <i class="fa fa-remove"></i>
 </button>`
               );
@@ -233,7 +290,7 @@ ${actionArr.join('')}
           if (!myHandlers[colName]) {
             myHandlers[colName] = async function(record, column, opts) {
               let rawVal = record[colName];
-              let dateFormat = (colMap[colName] && colMap[colName].dateFormat) || web.conf.defaultDateTimeFormat || 'MM/DD/YYYY hh:mm A';
+              let dateFormat = (colMap[colName] && colMap[colName].dateFormat) || 'MM/DD/YYYY hh:mm A';
               if (rawVal) {
                 return moment.tz(rawVal, web.conf.timezone).format(dateFormat);
               }
@@ -316,7 +373,7 @@ ${actionArr.join('')}
         sort: modelConf.sort,
         sortable: sortable,
         clientSortFunc: 'goSortColumn',
-        rowsPerPage: rowsPerPage,
+        rowsPerPage: _rowsPerPage,
         caseInsensitiveSorting: caseInsensitiveSorting,
         handlers: myHandlers,
         req: req,
@@ -335,8 +392,8 @@ ${actionArr.join('')}
 
 
       let rowsPerPageSelectVals = [10, 100, 500, 1000];
-      if (rowsPerPage && rowsPerPageSelectVals.indexOf(rowsPerPage) === -1) {
-        rowsPerPageSelectVals.push(rowsPerPage);
+      if (_rowsPerPage && rowsPerPageSelectVals.indexOf(_rowsPerPage) === -1) {
+        rowsPerPageSelectVals.push(_rowsPerPage);
         rowsPerPageSelectVals.sort(function(a, b){
             return a - b;
         });
@@ -346,13 +403,13 @@ ${actionArr.join('')}
         table: table,
         tableId: tableId,
         rowsPerPageSelectVals: rowsPerPageSelectVals,
-        rowsPerPage: rowsPerPage,
+        rowsPerPage: _rowsPerPage,
         redirectAfter: redirectAfter,
         saveParams: querySaveParams,
         pageTitle: myPageTitle,
         modelName: modelAttrName,
         queryModelName: queryModel,
-        showAddButton: showAddButton,
+        showAddButton: myShowAddButton,
         searchable: mySearchable,
         searchableStyle: searchableStyle,
         modelDisplayName: modelDisplayName,
