@@ -244,7 +244,7 @@ module.exports = function({
             let editActionOnClickStr = '';
             if (queryModel) {
               queryModelParam = '&model=' + encodeURIComponent(queryModel);
-              queryModelHidden = `<input type="hidden" name="model" value="${queryModelParam}">`
+              queryModelHidden = `<input type="hidden" name="model" value="${queryModel}">`
             }
 
             let querySaveParamsAppend = '';
