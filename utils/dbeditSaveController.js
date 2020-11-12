@@ -74,7 +74,11 @@ module.exports = function({
 
       const readOnly = (enableDangerousClientFiltering && req.query.readOnly && req.query.readOnly.split(','));
 
-      shouldShowDeleteAction = shouldShowDeleteAction || (enableDangerousClientFiltering && req.query.shouldShowDeleteAction);
+      let myShouldShowDeleteAction = shouldShowDeleteAction;
+
+      if (enableDangerousClientFiltering && req.query.shouldShowDeleteAction) {
+        myShouldShowDeleteAction = req.query.shouldShowDeleteAction === "Y";
+      }
 
       let myModelName = modelAttr.name;
       let modelDisplayName = queryDisplayName || modelAttr.displayName || modelAttr.name;
@@ -241,7 +245,7 @@ module.exports = function({
         colMap: colMap,
         parentTemplate: parentTemplate,
         filterCols: filterCols,
-        shouldShowDeleteAction: shouldShowDeleteAction,
+        shouldShowDeleteAction: myShouldShowDeleteAction,
         shouldShowSaveButton: myShowSaveButton,
         additionalSubmitButtons: additionalSubmitButtons,
       };

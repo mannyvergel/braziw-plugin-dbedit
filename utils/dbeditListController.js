@@ -77,9 +77,12 @@ module.exports = function({
         } else {
           myShowAddButton = showAddButton;
         }
-      } else {
-        myShowAddButton = (enableDangerousClientFiltering && req.query.showAddButton === 'Y');
       }
+
+      if (enableDangerousClientFiltering && req.query.showAddButton) {
+        myShowAddButton = req.query.showAddButton === 'Y';
+      }
+      
 
       let myShouldShowEditAction;
       if (shouldShowEditAction.permission) {
@@ -244,6 +247,11 @@ module.exports = function({
               queryModelHidden = `<input type="hidden" name="model" value="${queryModelParam}">`
             }
 
+            let querySaveParamsAppend = '';
+            if (querySaveParams) {
+              querySaveParamsAppend = '&' + querySaveParams;
+            }
+
             if (queryEditActionOnClick) {
               editActionOnClickStr = `onclick="${editActionOnClick}"`
             }
@@ -252,7 +260,7 @@ module.exports = function({
 
             if (myShouldShowEditAction) {
               actionArr.push(
-`<a title="Edit" ${editActionOnClickStr} class="btn btn-link btn-flatten-m" href="${editUrl}?_backUrl=${encodeURIComponent(req.url)}&_id=${record._id.toString()}${queryModelParam}"">
+`<a title="Edit" ${editActionOnClickStr} class="btn btn-link btn-flatten-m" href="${editUrl}?_backUrl=${encodeURIComponent(req.url)}&_id=${record._id.toString()}${queryModelParam}${querySaveParamsAppend}">
 <i class="fa fa-pencil"></i>
 </a>`
               )
