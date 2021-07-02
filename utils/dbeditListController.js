@@ -68,7 +68,10 @@ module.exports = function({
       const queryListView = listView || (req.query.listView);
       const queryPageTitle = pageTitle || (req.query.pageTitle);
       const queryDisplayName = displayName || (req.query.displayName);
-      const querySaveParams = (saveParams && web.objectUtils.isFunction(saveParams) ? await saveParams(req) : saveParams) || ((enableDangerousClientFiltering && req.query.saveParams) || "");
+      let querySaveParams = (saveParams && web.objectUtils.isFunction(saveParams) ? await saveParams(req) : saveParams) || ((enableDangerousClientFiltering && req.query.saveParams) || "");
+      if (querySaveParams && querySaveParams.substr(0, 1) !== "&") {
+        querySaveParams = "&" + querySaveParams;
+      } 
       
       let myShowAddButton;
       if (showAddButton !== undefined) {
@@ -77,12 +80,9 @@ module.exports = function({
         } else {
           myShowAddButton = showAddButton;
         }
+      } else {
+        myShowAddButton = (enableDangerousClientFiltering && req.query.showAddButton === 'Y');
       }
-
-      if (enableDangerousClientFiltering && req.query.showAddButton) {
-        myShowAddButton = req.query.showAddButton === 'Y';
-      }
-      
 
       let myShouldShowEditAction;
       if (shouldShowEditAction.permission) {
@@ -244,12 +244,7 @@ module.exports = function({
             let editActionOnClickStr = '';
             if (queryModel) {
               queryModelParam = '&model=' + encodeURIComponent(queryModel);
-              queryModelHidden = `<input type="hidden" name="model" value="${queryModel}">`
-            }
-
-            let querySaveParamsAppend = '';
-            if (querySaveParams) {
-              querySaveParamsAppend = '&' + querySaveParams;
+              queryModelHidden = `<input type="hidden" name="model" value="${queryModelParam}">`
             }
 
             if (queryEditActionOnClick) {
@@ -260,7 +255,7 @@ module.exports = function({
 
             if (myShouldShowEditAction) {
               actionArr.push(
-`<a title="Edit" ${editActionOnClickStr} class="btn btn-link btn-flatten-m" href="${editUrl}?_backUrl=${encodeURIComponent(req.url)}&_id=${record._id.toString()}${queryModelParam}${querySaveParamsAppend}">
+`<a title="Edit" ${editActionOnClickStr} class="btn btn-link btn-flatten-m" href="${editUrl}?_backUrl=${encodeURIComponent(req.url)}&_id=${record._id.toString()}${queryModelParam}${querySaveParams}">
 <i class="fa fa-pencil"></i>
 </a>`
               )
@@ -334,7 +329,13 @@ ${actionArr.join('')}
       
       let searchableQuery = await getSearchableQuery(req, mySearchable, myQuery, {
         forEach: async function(searchObj) {
-          if (!searchObj.hidden) {
+          if (web.objectUtils.isFunction(searchObj.hidden)) {
+            searchObj.hiddenComputed = await searchObj.hidden(searchObj, req);
+          } else {
+            searchObj.hiddenComputed = searchObj.hidden;
+          }
+
+          if (!searchObj.hiddenComputed) {
             visibleLength++;
           }
 
@@ -466,18 +467,32 @@ ${actionArr.join('')}
           throw new Error("Record not found.");
         }
 
-        if (beforeDelete) {
-          try {
+        try {
+          if (beforeDelete) {
             await beforeDelete(rec, req, res);
-          } catch (ex) {
-            console.warn("Error deleting", ex.message);
-            req.flash('error', ex.message || 'Error deleting record');
-            res.redirect(req.url);
-            return;
           }
+
+          if (web.ext && web.ext.dbUtils) {
+            await web.ext.dbUtils.remove(rec, req);
+          } else {
+            await rec.remove();
+          }
+        } catch (ex) {
+          console.warn("Error deleting", ex.message);
+          
+          if (ex.errors) {
+            for (const [key, value] of Object.entries(ex.errors)) {
+              req.flash('error', web.objectUtils.resolvePath(value, 'properties.message') || ex.message);
+            }
+          } else {
+            let errStr = ex.message || "Error deleting record.";
+            req.flash('error', errStr);
+          }
+
+          res.redirect(req.url);
+          return;
         }
 
-        await rec.remove();
         req.flash('info', "Record has been deleted.");
         res.redirect(redirectAfter);
         
@@ -559,6 +574,10 @@ async function getSearchableQuery(req, mySearchable, myQuery, {
         
       } else {
         let assignedSearchVal = sParamVal;
+        if (assignedSearchVal == '$NULL') {
+          assignedSearchVal = null;
+        }
+
         let isString = web.objectUtils.isString(assignedSearchVal);
         if (isString) {
           assignedSearchVal = assignedSearchVal.trim()

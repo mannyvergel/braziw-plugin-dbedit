@@ -13,7 +13,12 @@ i.dbedit {
 
     var params = new URLSearchParams(window.location.search);
     for (key in paramMap) {
-      params.set(key, paramMap[key]);
+      var paramVal = paramMap[key];
+      if (paramVal) {
+        params.set(key, paramVal);
+      } else {
+        params.delete(key);
+      }
     }
 
     var fragmentStr = "";
@@ -22,21 +27,29 @@ i.dbedit {
     } else if (window.location.hash) {
       fragmentStr = window.location.hash;
     }
+
     var newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?' + params.toString() + fragmentStr;
 
-    window.location.href = newUrl;
+    if (window.location.href == newUrl) {
+      window.location.reload(true);
+    } else {
+      window.location.href = newUrl;
+    }
 
   }
 
   function getAllSearchInput() {
-    return $('#frmSearch').find("input[type=text], textarea, select");
+    return $('#frmSearch').find("input[type=text], input[type=hidden], textarea, select");
   }
 
   function goSearch() {
     var paramMap = {};
     getAllSearchInput().each(function() {
       var jObj = $(this);
-      paramMap[jObj.attr('name')] = jObj.val();
+      var name = jObj.attr('name');
+      if (name) {
+        paramMap[jObj.attr('name')] = jObj.val();
+      }
     });
 
     // reset page number to 1
@@ -114,12 +127,13 @@ i.dbedit {
 {% block content %}
 {{super()}}
 
+{% block afterPageTitle %} {% endblock %}
+
 {%if showAddButton%}
 <p>
-  <a class="btn btn-primary" href="{{addUrl}}?model={{queryModelName}}&_backUrl={{redirectAfter}}&{{saveParams}}"><i class="fa fa-plus fa-fw"></i> Add {{modelDisplayName}}</a>
+  <a class="btn btn-primary" href="{{addUrl}}?{%if queryModelName%}model={{queryModelName}}&{%endif%}_backUrl={{redirectAfter}}{{saveParams}}"><i class="fa fa-plus fa-fw"></i> Add {{modelDisplayName}}</a>
 </p>
 {%endif%}
-
 
 {%if searchable.visibleLength > 0%}
 
@@ -133,7 +147,7 @@ i.dbedit {
           
     {%for searchObj in searchable%}
 
-      {%if not searchObj.hidden%}
+      {%if not searchObj.hiddenComputed%}
 
         {%if searchObj.attachToPrevious%}
           </div><div class="form-group col">
@@ -152,18 +166,22 @@ i.dbedit {
               <option value="{{key}}"{%if (searchObj.val.equals and searchObj.val.equals(key) or (searchObj.val == key))%} selected{%endif%}>{{val}}</option>
               {%endfor%}
             </select>
+          {%elif searchObj.inputType == "termField"%}
+            {{ forms.termField("f_" + searchObj.id, {value: searchObj.val, descType:searchObj.descType}) }}
+          {%elif searchObj.inputType == "acadYearField"%}
+            {{ forms.acadYearField("f_" + searchObj.id, {value: searchObj.val}) }}
           {%else%}
               <input type="text" name="f_{{searchObj.id}}" id="f_{{searchObj.id}}" class="form-control" placeholder="{{searchObj.placeholder}}" value="{{searchObj.val}}" />
           {%endif%}
           
         
 
+        {%endif%}
+
         {%if loop.last%} 
         </div></div>
         {%endif%}
-
-
-        {%endif%}
+        
       {%endfor%}
       
       
@@ -192,6 +210,7 @@ i.dbedit {
 
 {%endif%}
 
+{% block afterSearch %}{% endblock %}
 <a name="TABLE_LOC"></a>
 
 <div class="clearfix">
