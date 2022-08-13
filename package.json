@@ -1,6 +1,6 @@
 {
   "name": "braziw-plugin-dbedit",
-  "version": "8.0.0",
+  "version": "9.0.0",
   "description": "Braziw js Mongo DB object editor / scaffolding.",
   "keywords": [
     "braziw",
@@ -22,9 +22,9 @@
     "node": ">= 10.0.0"
   },
   "dependencies": {
-    "fast-csv": "^4.3.5",
-    "moment": "^2.29.1",
-    "moment-timezone": "^0.5.31"
+    "fast-csv": "^4.3.6",
+    "moment": "^2.29.4",
+    "moment-timezone": "^0.5.34"
   },
   "devDependencies": {},
   "bundleDependencies": [],
