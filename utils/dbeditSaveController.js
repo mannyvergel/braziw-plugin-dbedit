@@ -395,16 +395,22 @@ async function save(recId, req, res, model, beforeSave, colMap, isInsertMode, qu
     return null;
   }
 
+  try {
+    if (web.ext && web.ext.dbUtils) {
+      await web.ext.dbUtils.save(rec, req);
+    } else {
+      await rec.save();
+    }
+    return rec;
+  } catch (err) {
+    console.error("dbeditsave err:", err);
 
-  if (web.ext && web.ext.dbUtils) {
-    await web.ext.dbUtils.save(rec, req);
-  } else {
-    await rec.save();
+    req.flash('error', err.message);
+    res.redirect(req.url);
   }
 
-  return rec;
+  return null;
 }
-
 
 function handleModelSchemaForColObj(modelSchema, colName, colMap, rec) {
   let colMapObj = colMap[colName];
