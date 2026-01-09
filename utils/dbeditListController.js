@@ -293,8 +293,16 @@ ${actionArr.join('')}
           if (!myHandlers[colName]) {
             myHandlers[colName] = async function(record, column, opts) {
               let rawVal = record[colName];
-              let dateFormat = (colMap[colName] && colMap[colName].dateFormat) || 'MM/DD/YYYY hh:mm A';
               if (rawVal) {
+                let dateFormat = (colMap[colName] && colMap[colName].dateFormat);
+
+                if (!dateFormat) {
+                  dateFormat = 'MM/DD hh:mmA';
+                }
+                
+                if (rawVal.getFullYear() !== (new Date()).getFullYear()) {
+                  dateFormat = 'MM/DD/YYYY hh:mmA';
+                }
                 return moment.tz(rawVal, web.conf.timezone).format(dateFormat);
               }
 
