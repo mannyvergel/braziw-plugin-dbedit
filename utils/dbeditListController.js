@@ -127,6 +127,11 @@ module.exports = function({
 
       const queryModel = (enableDangerousClientFiltering && req.query.model);
       const modelStr = modelName || queryModel;
+
+      if (!enableDangerousClientFiltering && req.query.model && !modelStr) {
+        throw new Error("Dangerous Client Filtering is disabled by default. Please check plugin config.");
+      }
+      
       //should be in cache by this time (assumption)
       const model = web.cms.dbedit.utils.searchModel(modelStr);
       const modelAttr = model.getModelDictionary();

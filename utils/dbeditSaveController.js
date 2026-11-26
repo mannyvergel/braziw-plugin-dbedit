@@ -59,14 +59,25 @@ module.exports = function({
 
       let model = web.cms.dbedit.utils.searchModel(modelStr);
       // deep clone
-      let modelAttr = model.getModelDictionary();
+      const modelAttr = model.getModelDictionary();
       let modelSchema = modelAttr.schema;
 
       let filterCols = (colIds.length > 0 ? colIds : null) 
         || (enableDangerousClientFiltering && req.query.filterCols && req.query.filterCols.split(','))
         || Object.keys(modelSchema);
 
+      const modelAttrName = modelAttr.name;
+      const modelConf = web.cms.dbedit.utils.getModelConf(modelAttrName) || {};
       for (let colId of filterCols) {
+        if (modelConf.excludeSaveCols && modelConf.excludeSaveCols.includes(colId)) {
+          continue;
+        }
+
+        if (!modelConf.includeTimestamps) {
+          if (['createDt', 'createBy', 'updateDt', 'updateBy', 'created', 'createdAt', 'updatedAt'].includes(colId)) {
+            continue
+          }
+        }
         if (!colMap[colId]) {
           colMap[colId] = {};
         }
@@ -331,7 +342,7 @@ async function save(recId, req, res, model, beforeSave, colMap, isInsertMode, qu
   for (let colName in modelAttr.schema) {
     if (attrToSet[colName] || attrToSet[colName] === "") {
       if (web.objectUtils.isArray(modelSchema[colName])) {
-        attrToSet[colName] =  web.ext.arrayUtils.removeDuplicateAndEmpty(attrToSet[colName]);
+        attrToSet[colName] =  web.arrayUtils.removeDuplicateAndEmpty(attrToSet[colName]);
       }
 
       let dbCol = modelAttr.schema[colName];
@@ -348,8 +359,8 @@ async function save(recId, req, res, model, beforeSave, colMap, isInsertMode, qu
             dateFormat = 'MM/DD/YYYY hh:mm A';
           }
 
-          if (!web.ext.dateTimeUtils.momentFromString(date, dateFormat).isValid()) {
-            req.flash('error', `${colMap[colName].label} is an invalid date.`);
+          if (!web.dateUtils.momentFromString(date, dateFormat).isValid()) {
+            req.flash('error', `${colName} is an invalid date.`);
             res.redirect(req.url);
             return;
           }
